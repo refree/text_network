@@ -4,9 +4,13 @@ Text Network Graph by qgraph package
 웹 데이터를 활용한 **텍스트 네트워크** 그래프 그리기
 ====================================================
 
-이번 글에서는 [R을 활용하여 웹데이터 수집하기](https://refree.github.io/Web_Scraping/) 를 통해 수집한 데이터를 활용하여, 텍스트 네크워크 그래프를 그려보도록 하겠습니다.
+이번 글에서는 [R을 활용하여 웹데이터 수집하기](https://refree.github.io/Web_Scraping/) 를 통해 수집한 데이터를 활용하여,
 
-제가 [2017년](https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE07231534#)과 [2018년](https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE07408574) 작성한 논문에서도 이와 같은 부분을 활용하여, 제 도메인 필드에서 핵심이 되는 [교육과정](https://namu.wiki/w/%EA%B5%90%EC%9C%A1%EA%B3%BC%EC%A0%95)을 분석해보았습니다.
+텍스트 네크워크 그래프를 그려보도록 하겠습니다.
+
+제가 [2017년](https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE07231534#)과 [2018년](https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE07408574) 작성한 논문에서도 이와 같은 부분을 활용하여,
+
+제 도메인 필드에서 핵심이 되는 [교육과정](https://namu.wiki/w/%EA%B5%90%EC%9C%A1%EA%B3%BC%EC%A0%95)을 분석해보았습니다.
 
 일반적으로 학술연구에서는 본 방법으로 [연구동향 분석](https://www.dbpia.co.kr/search/topSearch?startCount=0&collection=ALL&range=A&searchField=ALL&sort=RANK&query=%EC%97%B0%EA%B5%AC%EB%8F%99%ED%96%A5&srchOption=*)과 같은 연구에 활용되고 있습니다.
 
@@ -23,11 +27,82 @@ Text Network Graph by qgraph package
 
 ### 시스템 세팅
 
-먼저, 관련 패키지를 설치하고, 불러옵니다. R 버전을 꾸준히 업데이트하지 않아서 저는 중간중간 많은 오류를 경험하였습니다. 지속적인 버전관리는 참 중요한거 같습니다^^
+먼저, 관련 패키지를 설치하고, 불러옵니다.
+
+R 버전을 꾸준히 업데이트하지 않아서 저는 중간중간 많은 오류를 경험하였습니다. 지속적인 버전관리는 참 중요한거 같습니다^^
+
+``` r
+#install.packages(c('httr','rvest','KoNLP','stringr','stringi','tm','sna','xml2','dplyr','qgrap'))
+library(rvest);library(httr);library(KoNLP);library(stringr); library(stringi);library(tm);library(sna);library(xml2);library(qgraph); library(dplyr)
+```
+
+    ## Loading required package: xml2
+
+    ## Fail to install scala-library-2.11.8.jar. Recommand to install library manually in C:/Users/Park Jung/Documents/R/win-library/3.6/KoNLP/java
+
+    ## Checking user defined dictionary!
+
+    ## Loading required package: NLP
+
+    ## 
+    ## Attaching package: 'NLP'
+
+    ## The following object is masked from 'package:httr':
+    ## 
+    ##     content
+
+    ## Loading required package: statnet.common
+
+    ## 
+    ## Attaching package: 'statnet.common'
+
+    ## The following object is masked from 'package:base':
+    ## 
+    ##     order
+
+    ## Loading required package: network
+
+    ## network: Classes for Relational Data
+    ## Version 1.16.0 created on 2019-11-30.
+    ## copyright (c) 2005, Carter T. Butts, University of California-Irvine
+    ##                     Mark S. Handcock, University of California -- Los Angeles
+    ##                     David R. Hunter, Penn State University
+    ##                     Martina Morris, University of Washington
+    ##                     Skye Bender-deMoll, University of Washington
+    ##  For citation information, type citation("network").
+    ##  Type help("network-package") to get started.
+
+    ## sna: Tools for Social Network Analysis
+    ## Version 2.5 created on 2019-12-09.
+    ## copyright (c) 2005, Carter T. Butts, University of California-Irvine
+    ##  For citation information, type citation("sna").
+    ##  Type help(package="sna") to get started.
+
+    ## Registered S3 methods overwritten by 'huge':
+    ##   method    from   
+    ##   plot.sim  BDgraph
+    ##   print.sim BDgraph
+
+    ## 
+    ## Attaching package: 'dplyr'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     filter, lag
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     intersect, setdiff, setequal, union
 
 **한글 사전**을 불러옵니다.
 
-추후 진행할 형태소 분석을 위해서는 해당 언어의 사전이 필수적입니다. 사전에 등록된 단어와 그 세부 정보에 따라 분석 결과의 정확성과 질이 좌우된다고 할 수 있습니다. 일반적으로 한글 분석에서는 세종사전과 NIA사전이 많이 활용됩니다. 저는 세종사전을 활용하였습니다.
+추후 진행할 형태소 분석을 위해서는 해당 언어의 사전이 필수적입니다.
+
+사전에 등록된 단어와 그 세부 정보에 따라 분석 결과의 정확성과 질이 좌우된다고 할 수 있습니다.
+
+일반적으로 한글 분석에서는 세종사전과 NIA사전이 많이 활용됩니다.
+
+저는 세종사전을 활용하였습니다.
 
 ``` r
 useSejongDic() #useNIADic() 
@@ -38,7 +113,11 @@ useSejongDic() #useNIADic()
 
 ### 데이터 전처리
 
-수집된 데이터를 전처리하는 과정이 언제나 필수적입니다. 가장 귀찮고, 시간이 많이 소모되는 과정입니다. 하지만, 전처리를 소홀히 한다면 원하는 결과를 얻기 더더욱 어렵다는 사실은 누구나 알고 계실 것 같습니다.
+수집된 데이터를 전처리하는 과정이 언제나 필수적입니다.
+
+**가장 귀찮고, 시간이 많이 소모되는 과정입니다.**
+
+하지만, 전처리를 소홀히 한다면 원하는 결과를 얻기 더더욱 어렵다는 사실은 누구나 알고 계실 것 같습니다.
 
 ``` r
 #먼저 지난 블로그를 통해 수집한 데이터를 업로딩 합니다. 
@@ -67,7 +146,11 @@ write.table(fl,"preprocessing.txt")  #전처리 결과 파일 txt형식으로 �
 
 ### 형태소 분석
 
-형태소 분석을 위해 커스텀 함수를 정의하고, 말뭉치로 변환한 뒤 토큰화하여 Term-Document-Matrix 형태(이하 TDM)로 변환합니다. [Term-Document-Matrix](http://www.darrinbishop.com/blog/2017/10/text-analytics-document-term-matrix/)는 링크해 드린 글을 참고하시기 바랍니다.
+형태소 분석을 위해 커스텀 함수를 정의하고,
+
+말뭉치로 변환한 뒤 토큰화하여 Term-Document-Matrix 형태(이하 TDM)로 변환합니다.
+
+[Term-Document-Matrix](http://www.darrinbishop.com/blog/2017/10/text-analytics-document-term-matrix/)는 링크해 드린 글을 참고하시기 바랍니다.
 
 ``` r
 #형태소 분석을 위한 커스텀 함수를 정의합니다. 
@@ -93,7 +176,15 @@ result <- as.matrix(tdm)               #tdm을 matrix 타입으로 변환
 
 ### 핵심 키워드 추출 및 공출현 행렬 연산
 
-이후 과정은 빈도 분석을 통해 가장 많이 등장하는 단어를 확인하고, 행렬간 연산을 통해 그래프를 그리기 위한 공출현 행렬(Co-occurence Matrix)로 변환합니다. TDM의 구조는 행은 Term(용어: 단어), 열은 Doc(문서)로 구성되어 있습니다. 따라서 TDM을 DTM으로 변환한 뒤, 두 행렬에 대한 곱셈 연산을 수행하면 공출현 행렬이 만들어지게 됩니다.
+이후 과정은 빈도 분석을 통해 가장 많이 등장하는 단어를 확인하고,
+
+행렬간 연산을 통해 그래프를 그리기 위한 공출현 행렬(Co-occurence Matrix)로 변환합니다.
+
+TDM의 구조는 행은 Term(용어: 단어), 열은 Doc(문서)로 구성되어 있습니다.
+
+따라서 TDM을 DTM으로 변환한 뒤,
+
+두 행렬에 대한 곱셈 연산을 수행하면 공출현 행렬이 만들어지게 됩니다.
 
 ``` r
 #상위빈도 20개 추출(너무 단어가 많아도 그래프 해석이 어렵습니다.)
@@ -166,7 +257,11 @@ co.matrix
 
 ### 네트워크 시각화
 
-qgraph 패키지를 활용하여 그래프를 그려보았습니다. 아직 전처리가 더 필요해 보이네요~ 그래프 결과 해석은 연구자에 따라 다르니, 생략하도록 하겠습니다.
+qgraph 패키지를 활용하여 그래프를 그려보았습니다.
+
+아직 전처리가 더 필요해 보이네요~
+
+그래프 결과 해석은 연구자에 따라 다르니, 생략하도록 하겠습니다.
 
 ``` r
 qg<-qgraph(co.matrix,labels=rownames(co.matrix),
@@ -182,8 +277,10 @@ plot(qg)
 
 ### 정리
 
-아직 R markdown과 Git이 초보인지라 제 컴퓨터로 할 때랑 조금 다르네요. 앞으로 더 간단하고 상세하게 코드와 과정을 정리해보겠습니다.
+아직 R markdown과 Git이 초보인지라 제 컴퓨터로 할 때랑 조금 다르네요.
 
-언제든 좋은 의견은 e-mail: <refree@chungbuk.ac.kr> 로 부탁드려요~
+앞으로 더 간단하고 상세하게 코드와 과정을 정리해보겠습니다.
+
+언제든 좋은 의견은 <refree@chungbuk.ac.kr> 로 부탁드려요~
 
 감사합니다.
